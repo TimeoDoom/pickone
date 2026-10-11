@@ -4,7 +4,7 @@
   "private": true,
   "description": "PickOne - paris entre amis (Vercel + Neon)",
   "engines": {
-    "node": "20.x"
+    "node": "24.x"
   },
   "scripts": {
     "start": "node backend/server.js",
