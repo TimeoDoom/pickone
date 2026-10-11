@@ -1,0 +1,1742 @@
+<!doctype html>
+<html lang="fr" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="logo.svg" />
+    <title>Pickone - Paris du Quotidien Entre Amis</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              coral: {
+                50: "#fff1f4",
+                100: "#ffe0e7",
+                200: "#ffc6d2",
+                300: "#ff9bb0",
+                400: "#ff6485",
+                500: "#f73863",
+                600: "#e01d4d",
+                700: "#bb1240",
+                800: "#9b1239",
+                900: "#541020",
+              },
+            },
+            fontFamily: {
+              sans: ["Inter", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
+    <!-- Google Fonts Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="style.css" />
+
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Chart.js (graphiques de la page Compte) -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Canvas Confetti for Victory Effects -->
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+  </head>
+  <body class="flex flex-col min-h-screen pb-12 antialiased">
+    <!-- AUTHENTICATION SCREEN (CONNEXION & INSCRIPTION) -->
+    <div
+      id="auth-screen"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#0b0c14] overflow-y-auto custom-scrollbar"
+    >
+      <div
+        class="absolute -top-32 -left-32 w-96 h-96 bg-coral-500/15 rounded-full blur-3xl pointer-events-none"
+      ></div>
+      <div
+        class="absolute -bottom-32 -right-32 w-96 h-96 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"
+      ></div>
+
+      <div
+        class="glass-modal w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6 border border-white/10 shadow-2xl relative my-auto"
+      >
+        <!-- Brand Logo -->
+        <div class="text-center space-y-2">
+          <img src="logo.svg" alt="Pickone" class="w-20 h-20 mx-auto drop-shadow-[0_8px_24px_rgba(247,56,99,0.35)]" />
+          <h1 class="text-3xl font-black text-white tracking-tight">
+            Pick<span class="text-gradient">one</span>
+          </h1>
+          <p class="text-xs text-gray-400 font-medium">
+            Paris du quotidien & Défis entre potes
+          </p>
+        </div>
+
+        <!-- Tab Switcher -->
+        <div
+          class="grid grid-cols-2 bg-gray-900/80 p-1 rounded-2xl border border-white/5"
+        >
+          <button
+            type="button"
+            id="auth-tab-login"
+            onclick="switchAuthTab('login')"
+            class="py-2 rounded-xl text-xs font-bold text-white bg-coral-500 transition-all"
+          >
+            Connexion
+          </button>
+          <button
+            type="button"
+            id="auth-tab-register"
+            onclick="switchAuthTab('register')"
+            class="py-2 rounded-xl text-xs font-bold text-gray-400 hover:text-white transition-all"
+          >
+            Créer un compte
+          </button>
+        </div>
+
+        <!-- FORM: LOGIN -->
+        <form id="form-login" onsubmit="handleLogin(event)" class="space-y-4">
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+              >Pseudo ou E-mail</label
+            >
+            <div class="relative">
+              <i
+                data-lucide="user"
+                class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"
+              ></i>
+              <input
+                type="text"
+                id="login-identifier"
+                required
+                placeholder="Pseudo ou e-mail"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+              >Mot de passe</label
+            >
+            <div class="relative">
+              <i
+                data-lucide="lock"
+                class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"
+              ></i>
+              <input
+                type="password"
+                id="login-password"
+                required
+                placeholder="••••••••"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3.5 rounded-xl text-sm shadow-lg shadow-coral-500/25 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="log-in" class="w-4 h-4"></i> Se Connecter
+          </button>
+        </form>
+
+        <!-- FORM: REGISTER -->
+        <form
+          id="form-register"
+          onsubmit="handleRegister(event)"
+          class="space-y-4 hidden"
+        >
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+              >Votre Pseudo *</label
+            >
+            <div class="relative">
+              <i
+                data-lucide="user"
+                class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"
+              ></i>
+              <input
+                type="text"
+                id="reg-username"
+                required
+                placeholder="Ex: MaxLePari"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+              >Adresse E-mail *</label
+            >
+            <div class="relative">
+              <i
+                data-lucide="mail"
+                class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"
+              ></i>
+              <input
+                type="email"
+                id="reg-email"
+                required
+                placeholder="pote@exemple.fr"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label
+              class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+              >Mot de passe *</label
+            >
+            <div class="relative">
+              <i
+                data-lucide="lock"
+                class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"
+              ></i>
+              <input
+                type="password"
+                id="reg-password"
+                required
+                minlength="6"
+                placeholder="••••••••"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+
+          <div
+            class="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl flex items-center gap-2.5"
+          >
+            <i data-lucide="gift" class="w-5 h-5 text-yellow-400 shrink-0"></i>
+            <p class="text-[11px] text-yellow-300 leading-tight">
+              <strong>Bonus de bienvenue :</strong> +1 000 PTS de crédit virtuel
+              offerts à la création !
+            </p>
+          </div>
+
+          <div class="space-y-2.5">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="checkbox" id="reg-adult" required class="mt-0.5 w-4 h-4 shrink-0 accent-[#f73863]" />
+              <span class="text-[11px] text-gray-300 leading-snug">Je confirme avoir <strong>18 ans ou plus</strong>.</span>
+            </label>
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="checkbox" id="reg-terms" required class="mt-0.5 w-4 h-4 shrink-0 accent-[#f73863]" />
+              <span class="text-[11px] text-gray-300 leading-snug">
+                J'ai lu et j'accepte les
+                <a href="legal/cgu.html" target="_blank" rel="noopener" class="underline text-coral-300 hover:text-white">CGU</a>
+                et la
+                <a href="legal/confidentialite.html" target="_blank" rel="noopener" class="underline text-coral-300 hover:text-white">politique de confidentialité</a>.
+              </span>
+            </label>
+          </div>
+
+          <button
+            type="submit"
+            class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3.5 rounded-xl text-sm shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="user-plus" class="w-4 h-4"></i> Créer mon Compte
+          </button>
+        </form>
+
+        <p class="mt-5 text-center text-[10px] text-gray-500 leading-relaxed">
+          Points virtuels sans valeur monétaire • Réservé aux 18 ans et plus<br />
+          <a href="legal/mentions-legales.html" target="_blank" rel="noopener" class="hover:text-white underline">Mentions légales</a> •
+          <a href="legal/cgu.html" target="_blank" rel="noopener" class="hover:text-white underline">CGU</a> •
+          <a href="legal/cgv.html" target="_blank" rel="noopener" class="hover:text-white underline">CGV</a> •
+          <a href="legal/confidentialite.html" target="_blank" rel="noopener" class="hover:text-white underline">Confidentialité</a>
+        </p>
+      </div>
+    </div>
+
+    <!-- MAIN APP CONTAINER -->
+    <div id="main-app" class="hidden flex-1 flex flex-col w-full">
+      <header class="sticky top-0 z-40 glass-nav transition-all duration-300">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div class="flex items-center justify-between h-18">
+            <!-- Logo -->
+            <div
+              class="flex items-center gap-3 cursor-pointer py-3"
+              onclick="switchTab('feed')"
+            >
+              <img src="logo.svg" alt="Pickone" class="w-10 h-10" />
+              <div>
+                <span
+                  class="text-xl font-extrabold tracking-tight text-white flex items-center"
+                >
+                  Pick<span class="text-gradient">one</span>
+                </span>
+                <p
+                  class="text-[10px] text-gray-400 font-medium tracking-wide uppercase"
+                >
+                  Paris Entre Potes
+                </p>
+              </div>
+            </div>
+
+            <!-- Navigation Desktop -->
+            <nav
+              class="hidden md:flex items-center gap-1 bg-gray-900/60 p-1.5 rounded-2xl border border-white/5"
+            >
+              <button
+                onclick="switchTab('feed')"
+                id="nav-feed"
+                class="nav-btn flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold transition-all text-white bg-coral-500/15 border border-coral-500/40"
+              >
+                <i data-lucide="flame" class="w-4 h-4"></i> Paris Actifs
+              </button>
+              <button
+                onclick="switchTab('mybets')"
+                id="nav-mybets"
+                class="nav-btn flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all"
+              >
+                <i data-lucide="ticket" class="w-4 h-4"></i> Mes Paris
+              </button>
+              <button
+                onclick="switchTab('arbitrage')"
+                id="nav-arbitrage"
+                class="nav-btn relative flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all"
+              >
+                <i data-lucide="gavel" class="w-4 h-4"></i> À Valider
+                <span
+                  id="pending-badge"
+                  class="hidden absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse"
+                  >0</span
+                >
+              </button>
+              <button
+                onclick="switchTab('leaderboard')"
+                id="nav-leaderboard"
+                class="nav-btn flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all"
+              >
+                <i data-lucide="crown" class="w-4 h-4"></i> Classement
+              </button>
+              <button
+                onclick="switchTab('friends')"
+                id="nav-friends"
+                class="nav-btn relative flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all"
+              >
+                <i data-lucide="users" class="w-4 h-4"></i> Social
+                <span
+                  id="friends-badge"
+                  class="hidden absolute -top-1 -right-1 w-5 h-5 bg-rose-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center"
+                  >0</span
+                >
+              </button>
+              <button
+                onclick="switchTab('account')"
+                id="nav-account"
+                class="nav-btn flex items-center gap-2 px-3 py-2 rounded-xl text-sm font-semibold text-gray-400 hover:text-white transition-all"
+              >
+                <i data-lucide="user" class="w-4 h-4"></i> Mon Compte
+              </button>
+            </nav>
+
+            <!-- Balance & Actions -->
+            <div class="flex items-center gap-3">
+              <div
+                class="glass-card px-3.5 py-1.5 rounded-2xl flex items-center gap-2.5 border border-yellow-500/20 bg-yellow-500/5 hover:border-yellow-500/40 transition-all cursor-pointer"
+                onclick="openRechargeModal()"
+              >
+                <div
+                  class="w-7 h-7 rounded-full bg-gradient-to-r from-amber-400 to-yellow-600 flex items-center justify-center text-gray-950 font-black text-xs shadow-md shadow-yellow-500/20"
+                >
+                  <i data-lucide="coins" class="w-4 h-4 text-gray-950"></i>
+                </div>
+                <div>
+                  <div
+                    class="text-[10px] text-yellow-500/80 uppercase font-extrabold tracking-wider leading-none"
+                  >
+                    Crédits
+                  </div>
+                  <div
+                    class="text-base font-black text-yellow-400 leading-tight"
+                    id="user-balance"
+                  >
+                    1,000
+                  </div>
+                </div>
+                <button
+                  class="w-6 h-6 rounded-lg bg-yellow-500/20 text-yellow-300 flex items-center justify-center hover:bg-yellow-500/40 transition-colors ml-1"
+                >
+                  <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+              <button
+                onclick="openCreateModal()"
+                class="hidden sm:flex items-center gap-2 bg-coral-500 hover:bg-coral-400 text-white font-bold px-4 py-2.5 rounded-xl text-sm shadow-lg shadow-coral-500/25 transition-all transform hover:-translate-y-0.5 active:translate-y-0"
+              >
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>Créer un Pari</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Navigation Mobile (Bottom Bar) -->
+        <div
+          class="md:hidden flex justify-around items-center px-2 py-2 border-t border-white/5 bg-gray-950/80 backdrop-blur-md"
+        >
+          <button
+            onclick="switchTab('feed')"
+            id="mob-feed"
+            class="mob-btn flex flex-col items-center py-1 px-2 rounded-xl text-xs font-medium text-gray-300"
+          >
+            <i data-lucide="flame" class="w-5 h-5 mb-0.5"></i> Actifs
+          </button>
+          <button
+            onclick="switchTab('mybets')"
+            id="mob-mybets"
+            class="mob-btn flex flex-col items-center py-1 px-2 rounded-xl text-xs font-medium text-gray-400"
+          >
+            <i data-lucide="ticket" class="w-5 h-5 mb-0.5"></i> Mes Paris
+          </button>
+          <button
+            onclick="openCreateModal()"
+            class="flex flex-col items-center justify-center -mt-5 bg-coral-500 w-12 h-12 rounded-full text-white shadow-lg shadow-coral-500/25"
+          >
+            <i data-lucide="plus" class="w-6 h-6"></i>
+          </button>
+          <button
+            onclick="switchTab('arbitrage')"
+            id="mob-arbitrage"
+            class="mob-btn flex flex-col items-center py-1 px-2 rounded-xl text-xs font-medium text-gray-400 relative"
+          >
+            <i data-lucide="gavel" class="w-5 h-5 mb-0.5"></i> À Valider
+            <span
+              id="mob-pending-badge"
+              class="hidden absolute top-0 right-3 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+              >0</span
+            >
+          </button>
+          <button
+            onclick="switchTab('friends')"
+            id="mob-friends"
+            class="mob-btn relative flex flex-col items-center py-1 px-2 rounded-xl text-xs font-medium text-gray-400"
+          >
+            <i data-lucide="users" class="w-5 h-5 mb-0.5"></i> Social
+            <span
+              id="mob-friends-badge"
+              class="hidden absolute top-0 right-0 w-4 h-4 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center"
+              >0</span
+            >
+          </button>
+          <button
+            onclick="switchTab('account')"
+            id="mob-account"
+            class="mob-btn flex flex-col items-center py-1 px-2 rounded-xl text-xs font-medium text-gray-400"
+          >
+            <i data-lucide="user" class="w-5 h-5 mb-0.5"></i> Compte
+          </button>
+        </div>
+      </header>
+
+      <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 flex-1 w-full">
+        <!-- Banner -->
+        <div
+          id="banner"
+          class="glass-card rounded-3xl p-6 sm:p-8 mb-8 relative overflow-hidden border border-white/10"
+        >
+          <div
+            class="absolute -right-10 -bottom-10 w-64 h-64 bg-coral-500/10 rounded-full blur-3xl pointer-events-none"
+          ></div>
+          <div
+            class="absolute right-40 -top-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"
+          ></div>
+
+          <div
+            class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6"
+          >
+            <div class="max-w-2xl">
+              <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-gray-300 text-xs font-semibold mb-3"
+              >
+                <span
+                  class="w-2 h-2 rounded-full bg-coral-400 animate-ping"
+                ></span>
+                Saison 1 • Challenge Entre Potes
+              </div>
+              <h1
+                class="text-2xl sm:text-4xl font-black text-white tracking-tight leading-tight"
+              >
+                Pariez sur tout et n'importe quoi avec vos amis
+              </h1>
+              <p
+                class="text-gray-400 text-sm sm:text-base mt-2 leading-relaxed"
+              >
+                Retards aux rendez-vous, matchs console, défis absurdes...
+                Défiez vos potes avec une monnaie virtuelle 100% fictive.
+              </p>
+            </div>
+            <div class="flex flex-wrap items-center gap-3 w-full md:w-auto">
+              <button
+                onclick="claimDailyBonus()"
+                id="daily-bonus-btn"
+                class="flex-1 md:flex-none flex items-center justify-center gap-2 bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-gray-950 font-black px-5 py-3 rounded-2xl shadow-lg shadow-amber-500/20 transition-all text-sm"
+              >
+                <i data-lucide="gift" class="w-4 h-4"></i>
+                <span>Bonus Quotidien (+200 PTS)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- SECTION 1: FEED (PARIS ACTIFS) -->
+        <section id="tab-feed" class="tab-content space-y-6">
+          <div
+            class="flex flex-col sm:flex-row gap-4 items-center justify-between"
+          >
+            <div
+              class="flex items-center gap-2 overflow-x-auto w-full sm:w-auto pb-2 sm:pb-0 custom-scrollbar"
+            >
+              <button
+                onclick="filterCategory('all')"
+                id="filter-all"
+                class="cat-filter flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-coral-500 text-white transition-all"
+              >
+                <i data-lucide="layers" class="w-3.5 h-3.5"></i> Tous les paris
+              </button>
+              <button
+                onclick="filterCategory('Quotidien')"
+                id="filter-Quotidien"
+                class="cat-filter flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-gray-900/80 text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+              >
+                <i data-lucide="sun" class="w-3.5 h-3.5"></i> Quotidien
+              </button>
+              <button
+                onclick="filterCategory('Gaming')"
+                id="filter-Gaming"
+                class="cat-filter flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-gray-900/80 text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+              >
+                <i data-lucide="gamepad-2" class="w-3.5 h-3.5"></i> Gaming
+              </button>
+              <button
+                onclick="filterCategory('Défi')"
+                id="filter-Défi"
+                class="cat-filter flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-gray-900/80 text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+              >
+                <i data-lucide="zap" class="w-3.5 h-3.5"></i> Défis
+              </button>
+              <button
+                onclick="filterCategory('Soirée')"
+                id="filter-Soirée"
+                class="cat-filter flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-gray-900/80 text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+              >
+                <i data-lucide="users" class="w-3.5 h-3.5"></i> Soirée
+              </button>
+              <button
+                onclick="filterCategory('Sport')"
+                id="filter-Sport"
+                class="cat-filter flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap bg-gray-900/80 text-gray-400 hover:text-white hover:bg-gray-800 transition-all"
+              >
+                <i data-lucide="activity" class="w-3.5 h-3.5"></i> Sport
+              </button>
+            </div>
+
+            <div class="flex items-center gap-2 self-end sm:self-auto shrink-0">
+              <select
+                id="feed-audience"
+                onchange="setFeedAudience(this.value)"
+                class="bg-gray-900/80 border border-white/10 rounded-xl px-3 py-2 text-xs font-bold text-gray-300 focus:outline-none focus:border-coral-500 transition-all max-w-[180px]"
+              >
+                <option value="all">Tous les paris</option>
+              </select>
+              <button
+                onclick="refreshData()"
+                title="Actualiser les données"
+                class="text-xs text-gray-400 hover:text-rose-400 flex items-center gap-1.5 px-3 py-2 rounded-xl border border-white/5 hover:border-rose-500/30 transition-all"
+              >
+                <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                Actualiser
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="bets-grid"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            <!-- Dynamic Active Bets Cards -->
+          </div>
+        </section>
+
+        <!-- SECTION 2: MY BETS -->
+        <section id="tab-mybets" class="tab-content hidden space-y-6">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                <i data-lucide="ticket" class="w-5 h-5 text-gray-300"></i> Mes
+                Paris engagés & Créations
+              </h2>
+              <p class="text-xs text-gray-400">
+                Retrouvez les paris sur lesquels vous avez misé ou que vous avez
+                créés.
+              </p>
+            </div>
+          </div>
+
+          <div
+            id="my-bets-grid"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            <!-- User's bets render here -->
+          </div>
+        </section>
+
+        <!-- SECTION 3: ARBITRAGE -->
+        <section id="tab-arbitrage" class="tab-content hidden space-y-6">
+          <div class="glass-card rounded-3xl p-6 border border-amber-500/20">
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400"
+              >
+                <i data-lucide="gavel" class="w-6 h-6"></i>
+              </div>
+              <div>
+                <h2 class="text-lg font-bold text-white">
+                  Centre d'Arbitrage & Clôture
+                </h2>
+                <p class="text-xs text-gray-400">
+                  En tant que créateur de pari, désignez le vainqueur officiel
+                  pour créditer les gains aux gagnants !
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div
+            id="arbitrage-grid"
+            class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+          >
+            <!-- Bets pending resolution -->
+          </div>
+        </section>
+
+        <!-- SECTION 4: LEADERBOARD -->
+        <section id="tab-leaderboard" class="tab-content hidden space-y-8">
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2 space-y-4">
+              <div class="flex items-center justify-between">
+                <h2
+                  class="text-xl font-bold text-white flex items-center gap-2"
+                >
+                  <i data-lucide="crown" class="w-5 h-5 text-amber-400"></i>
+                  Classement de la Bande
+                </h2>
+                <select
+                  id="lb-scope"
+                  onchange="setLeaderboardScope(this.value)"
+                  class="bg-gray-900/80 border border-white/10 rounded-xl px-3 py-1.5 text-xs font-bold text-gray-300 focus:outline-none focus:border-coral-500 transition-all max-w-[200px]"
+                >
+                  <option value="global">Tous les joueurs</option>
+                  <option value="friends">Mes amis</option>
+                </select>
+              </div>
+
+              <div
+                class="glass-card rounded-3xl overflow-hidden border border-white/5"
+              >
+                <div id="leaderboard-list" class="divide-y divide-white/5">
+                  <!-- Dynamic Leaderboard Items -->
+                </div>
+              </div>
+            </div>
+
+            <div class="space-y-6">
+              <div
+                class="glass-card rounded-3xl p-6 border border-white/5 space-y-4"
+              >
+                <h3
+                  class="text-base font-bold text-white flex items-center gap-2"
+                >
+                  <i data-lucide="line-chart" class="w-4 h-4 text-gray-400"></i>
+                  Mes Stats
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                  <div
+                    class="bg-gray-900/60 p-3.5 rounded-2xl border border-white/5"
+                  >
+                    <div class="text-[11px] text-gray-400 font-medium">
+                      Paris Joués
+                    </div>
+                    <div
+                      id="stat-total-bets"
+                      class="text-xl font-black text-white mt-1"
+                    >
+                      0
+                    </div>
+                  </div>
+                  <div
+                    class="bg-gray-900/60 p-3.5 rounded-2xl border border-white/5"
+                  >
+                    <div class="text-[11px] text-gray-400 font-medium">
+                      Taux de Victoire
+                    </div>
+                    <div
+                      id="stat-win-rate"
+                      class="text-xl font-black text-emerald-400 mt-1"
+                    >
+                      0%
+                    </div>
+                  </div>
+                  <div
+                    class="bg-gray-900/60 p-3.5 rounded-2xl border border-white/5"
+                  >
+                    <div class="text-[11px] text-gray-400 font-medium">
+                      Gains Totaux
+                    </div>
+                    <div
+                      id="stat-total-won"
+                      class="text-xl font-black text-yellow-400 mt-1"
+                    >
+                      0 PTS
+                    </div>
+                  </div>
+                  <div
+                    class="bg-gray-900/60 p-3.5 rounded-2xl border border-white/5"
+                  >
+                    <div class="text-[11px] text-gray-400 font-medium">
+                      Statut VIP
+                    </div>
+                    <div
+                      class="text-sm font-bold text-gray-300 mt-1.5 flex items-center gap-1"
+                    >
+                      <i data-lucide="zap" class="w-3.5 h-3.5 fill-current"></i>
+                      Challenger
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div
+                class="glass-card rounded-3xl p-6 border border-white/5 space-y-4"
+              >
+                <h3
+                  class="text-base font-bold text-white flex items-center gap-2"
+                >
+                  <i data-lucide="history" class="w-4 h-4 text-gray-400"></i>
+                  Historique des Clôtures
+                </h3>
+                <div
+                  id="closed-bets-history"
+                  class="space-y-3 custom-scrollbar max-h-72 overflow-y-auto pr-1"
+                >
+                  <!-- History items -->
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- SECTION: ROOMS & AMIS -->
+        <section id="tab-friends" class="tab-content hidden space-y-8">
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Rooms -->
+            <div class="space-y-4">
+              <div class="glass-card rounded-3xl p-6 space-y-4 border border-white/5">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="key-round" class="w-5 h-5 text-gray-300"></i>
+                  Rejoindre une room
+                </h2>
+                <form onsubmit="joinRoom(event)" class="flex gap-2">
+                  <input
+                    type="text"
+                    id="room-code"
+                    required
+                    maxlength="9"
+                    autocomplete="off"
+                    autocapitalize="characters"
+                    spellcheck="false"
+                    placeholder="CODE"
+                    class="flex-1 min-w-0 bg-gray-900/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm font-mono font-bold tracking-[0.3em] uppercase text-white placeholder-gray-600 focus:outline-none focus:border-coral-500 transition-all"
+                  />
+                  <button
+                    type="submit"
+                    class="bg-coral-500 hover:bg-coral-400 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    Rejoindre
+                  </button>
+                </form>
+                <p class="text-[10px] text-gray-500">Demandez le code à 6 caractères au créateur de la room.</p>
+              </div>
+
+              <div class="flex items-center justify-between pt-2">
+                <h2 class="text-xl font-bold text-white flex items-center gap-2">
+                  <i data-lucide="shield" class="w-5 h-5 text-gray-300"></i>
+                  Mes rooms
+                </h2>
+                <button
+                  onclick="openCreateGroupModal()"
+                  class="bg-coral-500 hover:bg-coral-400 text-white font-bold px-4 py-2 rounded-xl text-xs flex items-center gap-1.5 transition-all"
+                >
+                  <i data-lucide="plus" class="w-4 h-4"></i> Créer une room
+                </button>
+              </div>
+              <p class="text-xs text-gray-400">
+                Les paris créés pour une room ne sont visibles et jouables que par ses membres.
+              </p>
+              <div id="group-list" class="space-y-4"></div>
+            </div>
+            <!-- Amis -->
+            <div class="space-y-6">
+              <div class="glass-card rounded-3xl p-6 space-y-4 border border-white/5">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  <i data-lucide="user-plus" class="w-5 h-5 text-gray-300"></i>
+                  Ajouter un ami
+                </h2>
+                <form onsubmit="sendFriendRequest(event)" class="flex gap-2">
+                  <input
+                    type="text"
+                    id="friend-username"
+                    required
+                    maxlength="50"
+                    placeholder="Pseudo exact de votre ami"
+                    class="flex-1 min-w-0 bg-gray-900/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+                  />
+                  <button
+                    type="submit"
+                    class="bg-coral-500 hover:bg-coral-400 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all"
+                  >
+                    Inviter
+                  </button>
+                </form>
+              </div>
+
+              <div class="glass-card rounded-3xl p-6 space-y-3 border border-white/5">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="inbox" class="w-4 h-4 text-gray-300"></i>
+                  Demandes reçues
+                </h3>
+                <div id="friend-incoming" class="space-y-2"></div>
+              </div>
+
+              <div class="glass-card rounded-3xl p-6 space-y-3 border border-white/5">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="users" class="w-4 h-4 text-gray-300"></i>
+                  Mes amis <span id="friend-count" class="text-xs text-gray-400 font-semibold"></span>
+                </h3>
+                <div id="friend-list" class="space-y-2"></div>
+              </div>
+
+              <div class="glass-card rounded-3xl p-6 space-y-3 border border-white/5">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i data-lucide="send" class="w-4 h-4 text-gray-300"></i>
+                  Demandes envoyées
+                </h3>
+                <div id="friend-outgoing" class="space-y-2"></div>
+              </div>
+            </div>
+
+        </section>
+
+        <!-- SECTION 5: COMPTE & STATISTIQUES -->
+        <section id="tab-account" class="tab-content hidden space-y-8">
+          <!-- Profil Card Header -->
+          <div
+            class="glass-card rounded-3xl p-6 sm:p-8 border border-white/10 relative overflow-hidden"
+          >
+            <div
+              class="absolute -right-16 -bottom-16 w-60 h-60 bg-coral-500/15 rounded-full blur-3xl pointer-events-none"
+            ></div>
+            <div
+              class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6 relative z-10"
+            >
+              <div class="flex items-center gap-4">
+                <div
+                  id="account-avatar-badge"
+                  class="w-16 h-16 rounded-3xl bg-coral-500 flex items-center justify-center font-black text-2xl text-white shadow-lg shadow-coral-500/25"
+                >
+                  AL
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h2
+                      id="account-username-display"
+                      class="text-2xl font-black text-white"
+                    >
+                      Moi (Alex)
+                    </h2>
+                    <span
+                      class="text-[10px] bg-white/10 text-gray-200 font-extrabold px-2.5 py-1 rounded-full border border-white/10 flex items-center gap-1"
+                    >
+                      <i
+                        data-lucide="shield-check"
+                        class="w-3 h-3 text-gray-400"
+                      ></i>
+                      Membre VIP
+                    </span>
+                  </div>
+                  <p
+                    id="account-email-display"
+                    class="text-xs text-gray-400 mt-1"
+                  >
+                    
+                  </p>
+                </div>
+              </div>
+              <div class="flex items-center gap-3 w-full sm:w-auto">
+                <button
+                  onclick="openModal('modal-logout')"
+                  class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-gray-900/80 hover:bg-gray-800 text-gray-300 font-bold px-4 py-2.5 rounded-xl border border-white/10 text-xs transition-all"
+                >
+                  <i data-lucide="log-out" class="w-4 h-4 text-amber-400"></i>
+                  <span>Déconnexion</span>
+                </button>
+                <button
+                  onclick="openModal('modal-delete-account')"
+                  class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 font-bold px-4 py-2.5 rounded-xl border border-rose-500/20 text-xs transition-all"
+                >
+                  <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  <span>Supprimer</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stats Avancées -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="bar-chart-3" class="w-5 h-5 text-gray-300"></i>
+              Statistiques Détaillées
+            </h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+              <div
+                class="glass-card p-4 rounded-2xl border border-white/5 space-y-1"
+              >
+                <div
+                  class="text-[10px] text-gray-400 font-bold uppercase tracking-wider"
+                >
+                  Paris Engagés
+                </div>
+                <div id="acc-total-bets" class="text-2xl font-black text-white">
+                  0
+                </div>
+                <div class="text-[10px] text-gray-500">Mises validées</div>
+              </div>
+              <div
+                class="glass-card p-4 rounded-2xl border border-white/5 space-y-1"
+              >
+                <div
+                  class="text-[10px] text-gray-400 font-bold uppercase tracking-wider"
+                >
+                  Victoires
+                </div>
+                <div id="acc-wins" class="text-2xl font-black text-emerald-400">
+                  0
+                </div>
+                <div
+                  class="text-[10px] text-emerald-500/80 font-medium"
+                  id="acc-win-rate"
+                >
+                  0% taux de succès
+                </div>
+              </div>
+              <div
+                class="glass-card p-4 rounded-2xl border border-white/5 space-y-1"
+              >
+                <div
+                  class="text-[10px] text-gray-400 font-bold uppercase tracking-wider"
+                >
+                  Crédits Misés
+                </div>
+                <div
+                  id="acc-wagered"
+                  class="text-2xl font-black text-amber-400"
+                >
+                  0
+                </div>
+                <div class="text-[10px] text-gray-500">Total accumulé</div>
+              </div>
+              <div
+                class="glass-card p-4 rounded-2xl border border-white/5 space-y-1"
+              >
+                <div
+                  class="text-[10px] text-gray-400 font-bold uppercase tracking-wider"
+                >
+                  Gains Totaux
+                </div>
+                <div id="acc-won" class="text-2xl font-black text-gray-400">
+                  0
+                </div>
+                <div
+                  class="text-[10px] text-gray-400 font-medium"
+                  id="acc-net-profit"
+                >
+                  +0 PTS net
+                </div>
+              </div>
+              <div
+                class="glass-card p-4 rounded-2xl border border-white/5 space-y-1"
+              >
+                <div
+                  class="text-[10px] text-gray-400 font-bold uppercase tracking-wider"
+                >
+                  Plus Gros Gain
+                </div>
+                <div
+                  id="acc-best-win"
+                  class="text-2xl font-black text-yellow-400"
+                >
+                  0
+                </div>
+                <div class="text-[10px] text-gray-500">Record personnel</div>
+              </div>
+              <div
+                class="glass-card p-4 rounded-2xl border border-white/5 space-y-1"
+              >
+                <div
+                  class="text-[10px] text-gray-400 font-bold uppercase tracking-wider"
+                >
+                  Paris Créés
+                </div>
+                <div
+                  id="acc-created"
+                  class="text-2xl font-black text-gray-300"
+                >
+                  0
+                </div>
+                <div class="text-[10px] text-gray-500">Proposés à la bande</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Graphiques -->
+          <div class="space-y-4">
+            <h3 class="text-lg font-bold text-white flex items-center gap-2">
+              <i data-lucide="line-chart" class="w-5 h-5 text-gray-300"></i>
+              Graphiques
+            </h3>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div class="glass-card rounded-3xl p-5 border border-white/5 space-y-3 lg:col-span-2">
+                <div>
+                  <h4 class="text-sm font-bold text-white">Profit net cumulé</h4>
+                  <p class="text-[11px] text-gray-500">Gains moins mises sur les paris clôturés</p>
+                </div>
+                <div class="relative h-56">
+                  <canvas id="chart-net"></canvas>
+                  <div id="chart-net-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-6">Aucun pari clôturé pour l'instant.</div>
+                </div>
+              </div>
+              <div class="glass-card rounded-3xl p-5 border border-white/5 space-y-3 ">
+                <div>
+                  <h4 class="text-sm font-bold text-white">Résultats</h4>
+                  <p class="text-[11px] text-gray-500">Victoires, défaites et mises en cours</p>
+                </div>
+                <div class="relative h-56">
+                  <canvas id="chart-outcomes"></canvas>
+                  <div id="chart-outcomes-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-6">Place ta première mise pour voir ce graphique.</div>
+                </div>
+              </div>
+              <div class="glass-card rounded-3xl p-5 border border-white/5 space-y-3 ">
+                <div>
+                  <h4 class="text-sm font-bold text-white">Mises des 14 derniers jours</h4>
+                  <p class="text-[11px] text-gray-500">PTS misés par jour</p>
+                </div>
+                <div class="relative h-56">
+                  <canvas id="chart-activity"></canvas>
+                  <div id="chart-activity-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-6">Aucune mise ces 14 derniers jours.</div>
+                </div>
+              </div>
+              <div class="glass-card rounded-3xl p-5 border border-white/5 space-y-3 lg:col-span-2">
+                <div>
+                  <h4 class="text-sm font-bold text-white">Par catégorie</h4>
+                  <p class="text-[11px] text-gray-500">Victoires et défaites selon le type de pari</p>
+                </div>
+                <div class="relative h-56">
+                  <canvas id="chart-categories"></canvas>
+                  <div id="chart-categories-empty" class="hidden absolute inset-0 flex items-center justify-center text-xs text-gray-500 text-center px-6">Pas encore de mises par catégorie.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Infos Légales et Conditions de Plateforme -->
+          <div
+            class="glass-card rounded-3xl p-6 sm:p-8 border border-white/5 space-y-6"
+          >
+            <div class="flex items-center gap-3">
+              <div
+                class="w-10 h-10 rounded-2xl bg-white/10 text-gray-400 flex items-center justify-center"
+              >
+                <i data-lucide="file-text" class="w-5 h-5"></i>
+              </div>
+              <div>
+                <h3 class="text-lg font-bold text-white">
+                  Mentions Légales & Avertissements
+                </h3>
+                <p class="text-xs text-gray-400">
+                  Règles d'utilisation de Pickone et statut de la plateforme.
+                </p>
+              </div>
+            </div>
+
+            <div
+              class="grid grid-cols-1 md:grid-cols-2 gap-6 text-xs text-gray-300 leading-relaxed"
+            >
+              <div
+                class="bg-gray-900/60 p-4 rounded-2xl border border-white/5 space-y-2"
+              >
+                <h4 class="font-bold text-white flex items-center gap-2">
+                  <i data-lucide="coins" class="w-4 h-4 text-amber-400"></i>
+                  Monnaie Virtuelle Fictive (0€ engagé)
+                </h4>
+                <p class="text-gray-400">
+                  <strong>Pickone</strong> est un jeu de divertissement entre
+                  amis à des fins purement ludiques. Les points ("PTS") ou
+                  crédits utilisés n'ont aucune valeur monétaire réelle. Aucun
+                  véritable argent ne peut être déposé, misé ou retiré de la
+                  plateforme.
+                </p>
+              </div>
+
+              <div
+                class="bg-gray-900/60 p-4 rounded-2xl border border-white/5 space-y-2"
+              >
+                <h4 class="font-bold text-white flex items-center gap-2">
+                  <i data-lucide="lock" class="w-4 h-4 text-emerald-400"></i>
+                  Confidentialité & Données
+                </h4>
+                <p class="text-gray-400">
+                  Votre compte, vos paris et vos mises sont enregistrés sur nos
+                  serveurs. Vos données ne sont ni vendues ni utilisées à des
+                  fins publicitaires. Vous pouvez à tout moment les
+                  <button onclick="exportMyData()" class="underline text-white hover:text-coral-300">télécharger</button>
+                  ou supprimer votre compte (ci-dessus). Détails dans la
+                  <a href="legal/confidentialite.html" target="_blank" rel="noopener" class="underline text-white hover:text-coral-300">politique de confidentialité</a>.
+                </p>
+              </div>
+
+              <div
+                class="bg-gray-900/60 p-4 rounded-2xl border border-white/5 space-y-2"
+              >
+                <h4 class="font-bold text-white flex items-center gap-2">
+                  <i data-lucide="scale" class="w-4 h-4 text-gray-300"></i>
+                  Fair-Play & Arbitrage
+                </h4>
+                <p class="text-gray-400">
+                  Le créateur d'un pari du quotidien fait office d'arbitre
+                  impartial. En cas de désaccord, nous conseillons le bon sens
+                  et la bonne humeur !
+                </p>
+              </div>
+
+              <div
+                class="bg-gray-900/60 p-4 rounded-2xl border border-white/5 space-y-2"
+              >
+                <h4 class="font-bold text-white flex items-center gap-2">
+                  <i data-lucide="info" class="w-4 h-4 text-gray-400"></i>
+                  Éditeur & Version
+                </h4>
+                <p class="text-gray-400">
+                  <strong>Pickone</strong> • Conçu pour l'organisation de défis
+                  du quotidien, réservé aux majeurs.
+                  <a href="legal/mentions-legales.html" target="_blank" rel="noopener" class="underline text-white hover:text-coral-300">Mentions légales</a> •
+                  <a href="legal/cgu.html" target="_blank" rel="noopener" class="underline text-white hover:text-coral-300">CGU</a> •
+                  <a href="legal/cgv.html" target="_blank" rel="noopener" class="underline text-white hover:text-coral-300">CGV</a>
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="border-t border-white/5 mt-8 pb-24 md:pb-6">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-center text-[11px] text-gray-500 space-y-2">
+          <p>
+            Pickone est un jeu de divertissement : les points sont virtuels, sans valeur monétaire, et ne donnent lieu à aucun gain réel.
+            Réservé aux personnes majeures. Un doute sur votre pratique du jeu ? Joueurs Info Service : <strong class="text-gray-400">09 74 75 13 13</strong> (appel non surtaxé).
+          </p>
+          <p>
+            <a href="legal/mentions-legales.html" target="_blank" rel="noopener" class="hover:text-white underline">Mentions légales</a> •
+            <a href="legal/cgu.html" target="_blank" rel="noopener" class="hover:text-white underline">CGU</a> •
+            <a href="legal/cgv.html" target="_blank" rel="noopener" class="hover:text-white underline">CGV</a> •
+            <a href="legal/confidentialite.html" target="_blank" rel="noopener" class="hover:text-white underline">Confidentialité &amp; cookies</a>
+          </p>
+          <p>© 2026 Pickone</p>
+        </div>
+      </footer>
+
+      <!-- MODAL 1: CREATE BET -->
+      <div
+        id="modal-create"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-opacity"
+      >
+        <div
+          class="glass-modal w-full max-w-xl rounded-3xl p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto custom-scrollbar shadow-2xl relative border border-white/10"
+        >
+          <button
+            onclick="closeModal('modal-create')"
+            class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-white/5"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+
+          <div class="flex items-center gap-3">
+            <div
+              class="w-10 h-10 rounded-2xl bg-white/10 text-gray-300 flex items-center justify-center"
+            >
+              <i data-lucide="plus-circle" class="w-6 h-6"></i>
+            </div>
+            <div>
+              <h3 class="text-xl font-black text-white">
+                Lancer un Nouveau Pari
+              </h3>
+              <p class="text-xs text-gray-400">
+                Défiez vos amis sur un événement du quotidien.
+              </p>
+            </div>
+          </div>
+
+          <form
+            id="form-create-bet"
+            onsubmit="handleCreateBet(event)"
+            class="space-y-4"
+          >
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+                >Intitulé du Pari *</label
+              >
+              <input
+                type="text"
+                id="bet-title"
+                required
+                placeholder="Ex: Thomas va-t-il finir son café en moins de 3 min ?"
+                class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+                >Qui peut participer ?</label
+              >
+              <select
+                id="bet-audience"
+                class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+              >
+                <option value="">Tous les joueurs (public)</option>
+              </select>
+              <p class="text-[10px] text-gray-500 mt-1">
+                Choisissez une de vos rooms pour que seuls ses membres voient et jouent ce pari.
+              </p>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+                  >Catégorie *</label
+                >
+                <select
+                  id="bet-category"
+                  class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+                >
+                  <option value="Quotidien">Quotidien</option>
+                  <option value="Gaming">Gaming</option>
+                  <option value="Défi">Défi</option>
+                  <option value="Soirée">Soirée</option>
+                  <option value="Sport">Sport</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+                  >Mise Minimale (PTS) *</label
+                >
+                <input
+                  type="number"
+                  id="bet-min-amount"
+                  min="10"
+                  max="1000"
+                  value="50"
+                  required
+                  class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+                >Choix / Issue des Paris *</label
+              >
+              <div id="options-container" class="space-y-2">
+                <div class="flex items-center gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Option 1 (ex: Oui)"
+                    class="bet-option-input w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-coral-500"
+                  />
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1.1"
+                    value="1.8"
+                    title="Cote"
+                    class="bet-odds-input w-24 bg-gray-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-amber-400 font-bold text-center focus:outline-none focus:border-amber-500"
+                    placeholder="Cote"
+                  />
+                </div>
+                <div class="flex items-center gap-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Option 2 (ex: Non)"
+                    class="bet-option-input w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-coral-500"
+                  />
+                  <input
+                    type="number"
+                    step="0.1"
+                    min="1.1"
+                    value="2.1"
+                    title="Cote"
+                    class="bet-odds-input w-24 bg-gray-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-amber-400 font-bold text-center focus:outline-none focus:border-amber-500"
+                    placeholder="Cote"
+                  />
+                </div>
+              </div>
+              <button
+                type="button"
+                onclick="addOptionField()"
+                class="mt-2 text-xs text-gray-300 hover:text-white font-semibold flex items-center gap-1"
+              >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i> Ajouter une
+                option
+              </button>
+            </div>
+
+            <div>
+              <label
+                class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5"
+                >Durée du Pari *</label
+              >
+              <select
+                id="bet-duration"
+                class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+              >
+                <option value="1">1 heure</option>
+                <option value="24" selected>24 heures</option>
+                <option value="48">48 heures</option>
+                <option value="168">7 jours</option>
+              </select>
+            </div>
+
+            <div class="pt-4 flex items-center gap-3">
+              <button
+                type="button"
+                onclick="closeModal('modal-create')"
+                class="flex-1 px-4 py-3 rounded-xl border border-white/10 text-gray-300 font-bold text-sm hover:bg-white/5 transition-all"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                class="flex-1 bg-coral-500 hover:bg-coral-400 text-white font-bold px-4 py-3 rounded-xl text-sm shadow-lg shadow-coral-500/25 transition-all flex items-center justify-center gap-2"
+              >
+                <i data-lucide="check" class="w-4 h-4"></i> Lancer le Pari
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL 2: PLACE BET -->
+      <div
+        id="modal-place-bet"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-opacity"
+      >
+        <div
+          class="glass-modal w-full max-w-md rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative border border-emerald-500/30"
+        >
+          <button
+            onclick="closeModal('modal-place-bet')"
+            class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-white/5"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+
+          <div class="space-y-1">
+            <span
+              id="place-bet-cat"
+              class="text-[10px] uppercase tracking-widest font-extrabold text-gray-300 bg-white/5 px-2.5 py-1 rounded-full border border-white/10"
+              >Catégorie</span
+            >
+            <h3 id="place-bet-title" class="text-lg font-black text-white mt-2">
+              Titre du Pari
+            </h3>
+          </div>
+
+          <div
+            class="bg-gray-900/80 p-4 rounded-2xl border border-white/5 space-y-3"
+          >
+            <div class="text-xs text-gray-400 font-medium">Votre choix :</div>
+            <div class="flex items-center justify-between">
+              <span
+                id="place-bet-selected-option"
+                class="text-base font-bold text-white"
+                >Option Choisie</span
+              >
+              <span
+                id="place-bet-selected-odds"
+                class="text-sm font-black text-amber-400 bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/20"
+                >Cote 2.00</span
+              >
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <label
+              class="block text-xs font-bold text-gray-300 uppercase tracking-wider"
+              >Montant de votre mise (PTS)</label
+            >
+            <div class="relative">
+              <input
+                type="number"
+                id="place-bet-amount"
+                value="100"
+                min="10"
+                oninput="calculatePotentialGain()"
+                class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3.5 text-lg font-bold text-white focus:outline-none focus:border-emerald-500 transition-all"
+              />
+              <div class="absolute right-3 top-2.5 flex gap-1">
+                <button
+                  onclick="setBetQuickAmount(50)"
+                  class="px-2 py-1 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold rounded-lg"
+                >
+                  +50
+                </button>
+                <button
+                  onclick="setBetQuickAmount(200)"
+                  class="px-2 py-1 bg-white/5 hover:bg-white/10 text-gray-300 text-xs font-bold rounded-lg"
+                >
+                  +200
+                </button>
+                <button
+                  onclick="setBetQuickMax()"
+                  class="px-2 py-1 bg-white/5 hover:bg-coral-400/30 text-gray-300 text-xs font-bold rounded-lg"
+                >
+                  MAX
+                </button>
+              </div>
+            </div>
+
+            <div
+              class="flex items-center justify-between p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/20"
+            >
+              <span class="text-xs font-medium text-emerald-300"
+                >Gain Potentiel :</span
+              >
+              <span
+                id="place-bet-potential"
+                class="text-lg font-black text-emerald-400"
+                >200 PTS</span
+              >
+            </div>
+          </div>
+
+          <button
+            onclick="confirmPlaceBet()"
+            class="w-full bg-gradient-to-r from-emerald-500 to-teal-400 hover:from-emerald-400 hover:to-teal-300 text-gray-950 font-black py-3.5 rounded-xl text-base shadow-lg shadow-emerald-500/25 transition-all transform hover:-translate-y-0.5 flex items-center justify-center gap-2"
+          >
+            <i data-lucide="target" class="w-5 h-5"></i> Valider la Mise
+          </button>
+        </div>
+      </div>
+
+      <!-- MODAL 3: RECHARGE -->
+      <div
+        id="modal-recharge"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden transition-opacity"
+      >
+        <div
+          class="glass-modal w-full max-w-sm rounded-3xl p-6 text-center space-y-6 shadow-2xl relative border border-yellow-500/30"
+        >
+          <button
+            onclick="closeModal('modal-recharge')"
+            class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-white/5"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+
+          <div
+            class="w-16 h-16 rounded-2xl bg-yellow-500/20 text-yellow-400 flex items-center justify-center mx-auto"
+          >
+            <i data-lucide="coins" class="w-8 h-8"></i>
+          </div>
+
+          <div>
+            <h3 class="text-lg font-black text-white">Recharger vos Crédits</h3>
+            <p class="text-xs text-gray-400 mt-1">
+              Un petit coup de pouce quand votre solde est presque à sec.
+            </p>
+          </div>
+
+          <p id="recharge-status" class="text-xs text-gray-400"></p>
+
+          <button
+            id="btn-recharge"
+            onclick="addCredits()"
+            class="w-full p-3 bg-yellow-500/20 hover:bg-yellow-500/30 border border-yellow-500/40 rounded-2xl transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-yellow-500/20"
+          >
+            <div class="text-sm font-black text-white">+500 PTS</div>
+            <div class="text-[10px] text-yellow-400 font-bold mt-0.5">Recharge de dépannage</div>
+          </button>
+
+          <p class="text-[10px] text-gray-500">
+            Disponible uniquement si votre solde est inférieur à 100 PTS,
+            une fois toutes les 24 h.
+          </p>
+        </div>
+      </div>
+
+      <!-- MODAL: CREER UNE ROOM -->
+      <div
+        id="modal-create-group"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden"
+      >
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <button
+            onclick="closeModal('modal-create-group')"
+            class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-white/5"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h3 class="text-lg font-black text-white">Créer une room</h3>
+            <p class="text-xs text-gray-400 mt-1">Donnez un nom à votre room : un code d'invitation sera généré. Vous pouvez aussi y inviter directement des amis.</p>
+          </div>
+          <form onsubmit="submitCreateGroup(event)" class="space-y-4">
+            <div>
+              <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Nom de la room *</label>
+              <input
+                type="text"
+                id="group-name"
+                required
+                maxlength="50"
+                placeholder="Ex: La team du samedi"
+                class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+            <div>
+              <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Amis à inviter (facultatif)</label>
+              <div id="group-friend-picker" class="space-y-1.5 max-h-52 overflow-y-auto custom-scrollbar"></div>
+            </div>
+            <button
+              type="submit"
+              class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3 rounded-xl text-sm transition-all"
+            >
+              Créer la room
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <!-- MODAL: DETAIL D'UNE ROOM -->
+      <div
+        id="modal-group"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden"
+      >
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+          <button
+            onclick="closeGroupModal()"
+            class="absolute top-5 right-5 text-gray-400 hover:text-white p-2 rounded-xl hover:bg-white/5"
+          >
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+          <div>
+            <h3 id="group-modal-title" class="text-lg font-black text-white pr-8"></h3>
+            <p id="group-modal-sub" class="text-xs text-gray-400 mt-1"></p>
+          </div>
+          <div class="rounded-2xl border border-white/10 bg-gray-900/70 p-4 space-y-2">
+            <div class="text-[10px] font-bold uppercase tracking-wider text-gray-400">Code d'invitation</div>
+            <div class="flex items-center justify-between gap-3">
+              <span id="group-modal-code" class="font-mono text-2xl font-black tracking-[0.35em] text-white"></span>
+              <button
+                onclick="copyRoomCode()"
+                class="text-xs font-bold text-gray-200 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-2 rounded-xl flex items-center gap-1.5 transition-all"
+              >
+                <i data-lucide="copy" class="w-4 h-4"></i> Copier
+              </button>
+            </div>
+            <button
+              id="group-regen-btn"
+              onclick="regenerateRoomCode()"
+              class="hidden text-[11px] font-semibold text-gray-400 hover:text-white underline underline-offset-2"
+            >
+              Générer un nouveau code (l'ancien ne fonctionnera plus)
+            </button>
+          </div>
+          <div id="group-modal-members" class="space-y-2"></div>
+          <div id="group-modal-add" class="space-y-2">
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider">Ajouter un ami</label>
+            <div class="flex gap-2">
+              <select
+                id="group-add-select"
+                class="flex-1 min-w-0 bg-gray-900/80 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+              ></select>
+              <button
+                onclick="addMemberToGroup()"
+                class="bg-coral-500 hover:bg-coral-400 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition-all"
+              >
+                Ajouter
+              </button>
+            </div>
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <button
+              onclick="showGroupLeaderboard()"
+              class="py-2.5 rounded-xl text-sm font-bold text-gray-200 bg-gray-900/80 hover:bg-gray-800 border border-white/10 transition-all flex items-center justify-center gap-2"
+            >
+              <i data-lucide="crown" class="w-4 h-4"></i> Classement
+            </button>
+            <button
+              id="group-leave-btn"
+              onclick="leaveOrDeleteGroup()"
+              class="py-2.5 rounded-xl text-sm font-bold text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all"
+            ></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL: ACCEPTATION OBLIGATOIRE DES CGU -->
+      <div
+        id="modal-terms"
+        class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md hidden"
+      >
+        <div class="glass-modal w-full max-w-md rounded-3xl p-6 space-y-5 shadow-2xl max-h-[92vh] overflow-y-auto custom-scrollbar">
+          <div class="text-center space-y-2">
+            <img src="logo.svg" alt="" class="w-14 h-14 mx-auto" />
+            <h3 class="text-lg font-black text-white">Conditions d'utilisation</h3>
+            <p class="text-xs text-gray-400">
+              Pour continuer à utiliser Pickone, veuillez prendre connaissance des conditions à jour et les accepter.
+            </p>
+          </div>
+          <div class="space-y-2.5">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="checkbox" id="terms-adult" class="mt-0.5 w-4 h-4 shrink-0 accent-[#f73863]" />
+              <span class="text-xs text-gray-300 leading-snug">Je confirme avoir <strong>18 ans ou plus</strong>.</span>
+            </label>
+            <label class="flex items-start gap-2.5 cursor-pointer">
+              <input type="checkbox" id="terms-accept" class="mt-0.5 w-4 h-4 shrink-0 accent-[#f73863]" />
+              <span class="text-xs text-gray-300 leading-snug">
+                J'ai lu et j'accepte les
+                <a href="legal/cgu.html" target="_blank" rel="noopener" class="underline text-coral-300 hover:text-white">CGU</a>
+                et la
+                <a href="legal/confidentialite.html" target="_blank" rel="noopener" class="underline text-coral-300 hover:text-white">politique de confidentialité</a>.
+              </span>
+            </label>
+          </div>
+          <button
+            onclick="acceptTerms()"
+            class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3 rounded-xl text-sm transition-all"
+          >
+            Accepter et continuer
+          </button>
+          <div class="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px] text-gray-400">
+            <button onclick="exportMyData()" class="underline hover:text-white">Télécharger mes données</button>
+            <button onclick="confirmLogout()" class="underline hover:text-white">Me déconnecter</button>
+            <button onclick="if (confirm('Supprimer définitivement votre compte et vos données ?')) confirmDeleteAccount()" class="underline hover:text-rose-300">Supprimer mon compte</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL 4: CONFIRM LOGOUT -->
+      <div
+        id="modal-logout"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden"
+      >
+        <div class="glass-modal w-full max-w-sm rounded-3xl p-6 text-center space-y-5 shadow-2xl">
+          <div class="w-14 h-14 rounded-2xl bg-white/10 text-gray-300 flex items-center justify-center mx-auto">
+            <i data-lucide="log-out" class="w-7 h-7"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-white">Se déconnecter ?</h3>
+            <p class="text-xs text-gray-400 mt-1">Vous pourrez vous reconnecter à tout moment.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="closeModal('modal-logout')" class="py-2.5 rounded-xl text-sm font-bold text-gray-300 bg-gray-900/80 hover:bg-gray-800 border border-white/10 transition-all">Annuler</button>
+            <button onclick="confirmLogout()" class="py-2.5 rounded-xl text-sm font-bold text-white bg-coral-500 hover:bg-coral-400 transition-all">Déconnexion</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- MODAL 5: CONFIRM DELETE ACCOUNT -->
+      <div
+        id="modal-delete-account"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden"
+      >
+        <div class="glass-modal w-full max-w-sm rounded-3xl p-6 text-center space-y-5 shadow-2xl border border-rose-500/30">
+          <div class="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto">
+            <i data-lucide="trash-2" class="w-7 h-7"></i>
+          </div>
+          <div>
+            <h3 class="text-lg font-black text-white">Supprimer le compte ?</h3>
+            <p class="text-xs text-gray-400 mt-1">Votre compte, vos mises et vos paris créés seront définitivement supprimés.</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <button onclick="closeModal('modal-delete-account')" class="py-2.5 rounded-xl text-sm font-bold text-gray-300 bg-gray-900/80 hover:bg-gray-800 border border-white/10 transition-all">Annuler</button>
+            <button onclick="confirmDeleteAccount()" class="py-2.5 rounded-xl text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 transition-all">Supprimer</button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <!-- End of #main-app -->
+
+    <!-- POPUP BÊTA (affichée une seule fois par navigateur) -->
+    <div
+      id="modal-beta"
+      class="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md hidden"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="beta-title"
+    >
+      <div class="glass-modal w-full max-w-sm rounded-3xl p-6 text-center space-y-5 shadow-2xl">
+        <div class="w-14 h-14 rounded-2xl bg-amber-400/15 text-amber-400 flex items-center justify-center mx-auto">
+          <i data-lucide="flask-conical" class="w-7 h-7"></i>
+        </div>
+        <div class="space-y-2">
+          <span class="inline-block text-[10px] font-black uppercase tracking-wider bg-amber-400/15 text-amber-300 px-2.5 py-1 rounded-full">Version bêta</span>
+          <h3 id="beta-title" class="text-lg font-black text-white">Bienvenue sur PickOne !</h3>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Le site est actuellement en <strong class="text-gray-200">bêta</strong> : certaines choses peuvent encore
+            être imparfaites ou changer. Un bug, un souci, une idée ? Écris-nous à
+            <a href="mailto:contact@pickone.fr?subject=Retour%20b%C3%AAta%20PickOne" class="underline text-white hover:text-coral-300">contact@pickone.fr</a>,
+            on lit tous les retours.
+          </p>
+        </div>
+        <button onclick="closeBetaModal()" class="w-full py-2.5 rounded-xl text-sm font-bold text-white bg-coral-500 hover:bg-coral-400 transition-all">C'est compris</button>
+      </div>
+    </div>
+
+    <!-- TOAST -->
+    <div
+      id="toast"
+      class="fixed bottom-24 md:bottom-6 right-4 z-[60] translate-y-20 opacity-0 transition-all duration-300 pointer-events-none"
+    >
+      <div class="glass-modal rounded-2xl px-4 py-3 flex items-center gap-3 shadow-2xl max-w-xs">
+        <div id="toast-icon-wrapper" class="w-8 h-8 rounded-xl bg-white/10 text-gray-300 flex items-center justify-center"></div>
+        <span id="toast-message" class="text-xs font-semibold text-white"></span>
+      </div>
+    </div>
+
+    <script src="./script.js"></script>
+  </body>
+</html>
