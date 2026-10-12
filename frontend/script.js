@@ -47,7 +47,10 @@ async function api(path, { method = "GET", body, auth = true } = {}) {
       endSession();
       throw new Error("Session expirée, veuillez vous reconnecter.");
     }
-    throw new Error(data.error || `Erreur ${response.status}`);
+    const error = new Error(data.error || `Erreur ${response.status}`);
+    error.code = data.code;
+    error.data = data;
+    throw error;
   }
   return data;
 }
@@ -220,6 +223,10 @@ async function handleLogin(e) {
   try {
     await loginWith(identifier, password);
   } catch (err) {
+    if (err.code === "EMAIL_NOT_VERIFIED") {
+      showVerifyStep(err.data.email);
+      return showToast(err.message, "info");
+    }
     showToast(err.message, "error");
   }
 }
@@ -241,12 +248,77 @@ async function handleRegister(e) {
         acceptTerms: document.getElementById("reg-terms").checked,
       },
     });
+    showVerifyStep(data.email || email);
+    showToast("Code envoyé ! Consultez votre boîte mail (et les spams).", "success");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+
+// ---------- Vérification de l'e-mail ----------
+let verifyEmail = "";
+let resendTimer = null;
+
+function showVerifyStep(email) {
+  verifyEmail = email;
+  document.getElementById("form-login").classList.add("hidden");
+  document.getElementById("form-register").classList.add("hidden");
+  document.getElementById("form-verify").classList.remove("hidden");
+  document.getElementById("verify-email-label").textContent = email;
+  document.getElementById("verify-code").value = "";
+  document.getElementById("verify-code").focus();
+  startResendCooldown(60);
+  lucide.createIcons();
+}
+
+function startResendCooldown(seconds) {
+  const btn = document.getElementById("verify-resend");
+  clearInterval(resendTimer);
+  let left = seconds;
+  const tick = () => {
+    if (left <= 0) {
+      clearInterval(resendTimer);
+      btn.disabled = false;
+      btn.textContent = "Renvoyer le code";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = `Renvoyer le code (${left}s)`;
+    left--;
+  };
+  tick();
+  resendTimer = setInterval(tick, 1000);
+}
+
+async function handleVerifyEmail(e) {
+  e.preventDefault();
+  const code = document.getElementById("verify-code").value.trim();
+  try {
+    const data = await api("/auth/verify-email", {
+      method: "POST",
+      auth: false,
+      body: { email: verifyEmail, code },
+    });
+    clearInterval(resendTimer);
     setToken(data.token);
     appState.isLoggedIn = true;
     applyUser(data.user);
     showMainApp();
+    document.getElementById("form-verify").classList.add("hidden");
+    document.getElementById("form-login").classList.remove("hidden");
     confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-    showToast(`Bienvenue sur Pickone, ${username} ! +1000 PTS offerts`, "success");
+    showToast(`Bienvenue sur Pickone, ${data.user.username} ! +1000 PTS offerts`, "success");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function resendVerificationCode() {
+  try {
+    await api("/auth/resend-code", { method: "POST", auth: false, body: { email: verifyEmail } });
+    showToast("Nouveau code envoyé.", "success");
+    startResendCooldown(60);
   } catch (err) {
     showToast(err.message, "error");
   }
@@ -272,6 +344,23 @@ async function confirmDeleteAccount() {
 // ==========================================================
 // Actions métier (toutes passent par l'API)
 // ==========================================================
+const MAX_DURATION_DAYS = 365;
+
+function onDurationChange() {
+  const custom = document.getElementById("bet-duration").value === "custom";
+  document.getElementById("bet-duration-custom").classList.toggle("hidden", !custom);
+  document.getElementById("bet-duration-hint").classList.toggle("hidden", !custom);
+}
+
+// Durée en heures : préréglage, ou valeur personnalisée (heures / jours)
+function readDurationHours() {
+  const sel = document.getElementById("bet-duration").value;
+  if (sel !== "custom") return parseInt(sel, 10) || 24;
+  const value = parseInt(document.getElementById("bet-duration-value").value, 10);
+  const unit = parseInt(document.getElementById("bet-duration-unit").value, 10);
+  return (value > 0 ? value : 0) * unit;
+}
+
 async function handleCreateBet(e) {
   e.preventDefault();
   const optionInputs = document.querySelectorAll(".bet-option-input");
@@ -284,6 +373,10 @@ async function handleCreateBet(e) {
   if (options.length < 2) {
     return showToast("Veuillez ajouter au moins 2 options au pari.", "error");
   }
+  const durationHours = readDurationHours();
+  if (durationHours < 1 || durationHours > 24 * MAX_DURATION_DAYS) {
+    return showToast(`Durée invalide : de 1 heure à ${MAX_DURATION_DAYS} jours.`, "error");
+  }
   try {
     await api("/events", {
       method: "POST",
@@ -291,13 +384,14 @@ async function handleCreateBet(e) {
         title: document.getElementById("bet-title").value.trim(),
         category: document.getElementById("bet-category").value,
         minBet: parseInt(document.getElementById("bet-min-amount").value, 10) || 50,
-        durationHours: parseInt(document.getElementById("bet-duration").value, 10) || 24,
+        durationHours: readDurationHours(),
         groupId: document.getElementById("bet-audience").value || null,
         options,
       },
     });
     closeModal("modal-create");
     document.getElementById("form-create-bet").reset();
+    onDurationChange();
     await refreshData();
     showToast("Nouveau pari publié avec succès !", "success");
   } catch (err) {
@@ -574,6 +668,7 @@ function switchAuthTab(tab) {
   const regBtn = document.getElementById("auth-tab-register");
   const formLogin = document.getElementById("form-login");
   const formReg = document.getElementById("form-register");
+  document.getElementById("form-verify").classList.add("hidden");
 
   if (tab === "login") {
     loginBtn.className =
@@ -679,6 +774,7 @@ function getTimeRemaining(expiresAt) {
   if (diff <= 0) return "Expiré (À clôturer)";
   const hours = Math.floor(diff / 3600000);
   const mins = Math.floor((diff % 3600000) / 60000);
+  if (hours >= 48) return `Reste ${Math.floor(hours / 24)}j ${hours % 24}h`;
   return `Reste ${hours}h ${mins}m`;
 }
 
@@ -714,6 +810,7 @@ function renderFeed() {
   }
 
   filteredBets.forEach((bet) => {
+    const isOwnBet = bet.creatorId === appState.currentUserId;
     const totalPot = bet.options.reduce((sum, opt) => sum + opt.totalAmount, 0);
     let totalBetters = new Set();
     bet.options.forEach((opt) =>
@@ -725,7 +822,7 @@ function renderFeed() {
         const percentage =
           totalPot > 0 ? Math.round((opt.totalAmount / totalPot) * 100) : 50;
         return `
-                        <div class="group relative overflow-hidden bg-gray-900/70 border border-white/5 hover:border-white/25 p-3 rounded-2xl transition-all cursor-pointer" onclick="openPlaceBetModal('${bet.id}', '${opt.id}')">
+                        <div class="group relative overflow-hidden bg-gray-900/70 border border-white/5 p-3 rounded-2xl transition-all ${isOwnBet ? "cursor-default opacity-80" : "hover:border-white/25 cursor-pointer"}" ${isOwnBet ? "" : `onclick="openPlaceBetModal('${bet.id}', '${opt.id}')"`}>
                             <div class="absolute left-0 top-0 bottom-0 bg-coral-500/15 transition-all duration-500" style="width: ${percentage}%"></div>
                             <div class="relative z-10 flex items-center justify-between">
                                 <div class="flex items-center gap-2">
@@ -775,6 +872,7 @@ function renderFeed() {
 
                         <div class="space-y-2">
                             ${optionsHTML}
+                            ${isOwnBet ? '<p class="text-[11px] text-amber-400 font-bold flex items-center gap-1.5 pt-1"><i data-lucide="shield" class="w-3.5 h-3.5"></i> Vous êtes le créateur : vous arbitrez ce pari, vous ne pouvez pas y miser.</p>' : ""}
                         </div>
 
                         <div class="flex items-center justify-between pt-3 border-t border-white/5 text-xs text-gray-400">
@@ -1026,6 +1124,9 @@ function openPlaceBetModal(betId, optionId) {
   if (!bet) return;
   const opt = bet.options.find((o) => o.id === optionId);
   if (!opt) return;
+  if (bet.creatorId === appState.currentUserId) {
+    return showToast("Vous ne pouvez pas miser sur un pari que vous avez créé.", "error");
+  }
 
   appState.selectedBetForBetting = bet;
   appState.selectedOptionForBetting = opt;

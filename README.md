@@ -39,10 +39,20 @@ PORT=5001
 DATABASE_URL=postgres://UTILISATEUR:MOTDEPASSE@localhost:5432/pickone_db
 JWT_SECRET=une-longue-chaine-aleatoire-et-secrete
 NODE_ENV=development
+
+# E-mail de vérification (SMTP : Brevo, Resend, Gmail avec mot de passe d'application, etc.)
+SMTP_HOST=smtp.exemple.com
+SMTP_PORT=587
+SMTP_USER=votre-identifiant-smtp
+SMTP_PASS=votre-mot-de-passe-smtp
+MAIL_FROM="Pickone <no-reply@votredomaine.fr>"
 ```
 
 > `JWT_SECRET` est **obligatoire** : le serveur refuse de démarrer sans lui.
 > Adaptez `DATABASE_URL` à votre installation PostgreSQL.
+> **Vérification d'e-mail** : à l'inscription, un code à 6 chiffres (valable 10 min, 5 essais, renvoi toutes les 60 s) est envoyé par e-mail.
+> En développement, si `SMTP_*` est absent, le code s'affiche simplement dans la console du serveur. En production, SMTP est obligatoire.
+> Les comptes créés avant cette fonctionnalité sont considérés comme déjà vérifiés.
 
 ## 4. Tables (automatique)
 

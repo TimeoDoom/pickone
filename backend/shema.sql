@@ -93,3 +93,26 @@ CREATE INDEX IF NOT EXISTS idx_events_status ON events(status);
 
 -- Date de clôture d'un pari (sert aux graphiques de stats du compte)
 ALTER TABLE events ADD COLUMN IF NOT EXISTS resolved_at TIMESTAMP WITH TIME ZONE;
+
+-- Vérification de l'e-mail par code à 6 chiffres.
+-- Les comptes déjà existants sont considérés comme vérifiés (colonne créée avec DEFAULT TRUE
+-- une seule fois), les nouveaux comptes démarrent à FALSE.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name = 'users' AND column_name = 'email_verified'
+  ) THEN
+    ALTER TABLE users ADD COLUMN email_verified BOOLEAN NOT NULL DEFAULT TRUE;
+    ALTER TABLE users ALTER COLUMN email_verified SET DEFAULT FALSE;
+  END IF;
+END $$;
+
+-- Un seul code actif par utilisateur (stocké haché, jamais en clair)
+CREATE TABLE IF NOT EXISTS email_verifications (
+    user_id INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    code_hash VARCHAR(64) NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    attempts INT NOT NULL DEFAULT 0,
+    last_sent_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

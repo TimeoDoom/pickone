@@ -8,6 +8,7 @@ require("dotenv").config();
 const db = require("./db");
 const authenticateToken = require("./middleware/auth");
 const fs = require("fs");
+const { sendVerificationCode } = require("./mailer");
 
 if (!process.env.JWT_SECRET) {
   console.error("JWT_SECRET manquant dans le fichier .env");
@@ -25,6 +26,14 @@ const RECHARGE_AMOUNT = 500;
 const RECHARGE_MAX_BALANCE = 100; // le solde doit être strictement inférieur
 const RECHARGE_COOLDOWN_HOURS = 24;
 const DAILY_BONUS = 200;
+
+// Durée d'un pari : personnalisable, de 1 heure à 365 jours
+const MAX_DURATION_DAYS = 365;
+
+// Vérification de l'e-mail par code
+const CODE_TTL_MINUTES = 10; // validité du code
+const CODE_MAX_ATTEMPTS = 5; // essais avant de devoir redemander un code
+const CODE_RESEND_SECONDS = 60; // délai minimum entre deux envois
 
 // Version des CGU / politique de confidentialité : à changer dès qu'un de ces textes
 // évolue de manière substantielle (les utilisateurs devront alors les accepter à nouveau).
@@ -164,6 +173,30 @@ async function requireTerms(req, res, next) {
   }
 }
 
+// ---------- Vérification de l'e-mail ----------
+const hashCode = (userId, code) =>
+  crypto.createHmac("sha256", process.env.JWT_SECRET).update(`${userId}:${code}`).digest("hex");
+
+// Génère un code à 6 chiffres, le stocke haché (un seul code actif par utilisateur) et l'envoie.
+// Le délai entre deux envois est contrôlé dans la requête SQL (pas de contournement possible).
+async function issueVerificationCode(userId, username, email) {
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+  const r = await db.query(
+    `INSERT INTO email_verifications (user_id, code_hash, expires_at, attempts, last_sent_at)
+     VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval, 0, NOW())
+     ON CONFLICT (user_id) DO UPDATE
+       SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at,
+           attempts = 0, last_sent_at = NOW()
+       WHERE email_verifications.last_sent_at <= NOW() - ($4 || ' seconds')::interval
+     RETURNING user_id`,
+    [userId, hashCode(userId, code), String(CODE_TTL_MINUTES), String(CODE_RESEND_SECONDS)],
+  );
+  if (r.rows.length === 0) {
+    throw { status: 429, msg: `Un code vient d'être envoyé. Patientez ${CODE_RESEND_SECONDS} s avant d'en redemander un.` };
+  }
+  await sendVerificationCode(email, username, code, CODE_TTL_MINUTES);
+}
+
 // ---------- 1. Création de compte ----------
 app.post("/api/auth/register", async (req, res) => {
   const username = (req.body.username || "").trim();
@@ -193,27 +226,111 @@ app.post("/api/auth/register", async (req, res) => {
       .json({ error: "Le mot de passe doit faire au moins 6 caractères." });
   }
 
+  let createdId = null;
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
+    // Un compte jamais vérifié depuis plus d'1 h ne bloque plus son pseudo / e-mail
+    await db.query(
+      `DELETE FROM users
+       WHERE email_verified = FALSE AND created_at < NOW() - INTERVAL '1 hour'
+         AND (lower(email) = $1 OR lower(username) = lower($2))`,
+      [email, username],
+    );
     const created = await db.query(
-      `INSERT INTO users (username, email, password_hash, terms_accepted_at, terms_version)
-       VALUES ($1, $2, $3, NOW(), $4) RETURNING id, username, email, balance`,
+      `INSERT INTO users (username, email, password_hash, terms_accepted_at, terms_version, email_verified)
+       VALUES ($1, $2, $3, NOW(), $4, FALSE) RETURNING id, username, email`,
       [username, email, hashedPassword, TERMS_VERSION],
     );
-    const user = await getUserWithStats(created.rows[0].id);
+    createdId = created.rows[0].id;
+    await issueVerificationCode(createdId, username, email);
+    // Pas de jeton ici : le compte n'est utilisable qu'après vérification de l'e-mail
     res.status(201).json({
-      message: "Compte créé avec succès",
-      token: signToken({ id: user.id, username: user.username }),
-      user,
+      message: "Compte créé. Un code de vérification vient d'être envoyé par e-mail.",
+      needsVerification: true,
+      email,
     });
   } catch (err) {
     if (err.code === "23505") {
-      return res
-        .status(400)
-        .json({ error: "Nom d'utilisateur ou email déjà utilisé." });
+      return res.status(400).json({
+        error: "Nom d'utilisateur ou email déjà utilisé. (Compte non vérifié ? Connectez-vous pour recevoir un nouveau code.)",
+      });
+    }
+    // L'e-mail n'a pas pu partir : on annule la création pour que l'utilisateur puisse réessayer
+    if (createdId !== null) {
+      await db.query("DELETE FROM users WHERE id = $1", [createdId]).catch(() => {});
+      console.error("Envoi e-mail impossible :", err.message);
+      return res.status(502).json({ error: "Impossible d'envoyer l'e-mail de vérification. Réessayez dans un instant." });
     }
     console.error(err);
     res.status(500).json({ error: "Erreur serveur." });
+  }
+});
+
+// ---------- 1b. Vérification de l'e-mail ----------
+app.post("/api/auth/verify-email", async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
+  const code = String(req.body.code || "").replace(/\s/g, "");
+  if (!email || !/^\d{6}$/.test(code)) {
+    return res.status(400).json({ error: "Entrez le code à 6 chiffres reçu par e-mail." });
+  }
+  try {
+    const u = await db.query("SELECT id, username, email_verified FROM users WHERE lower(email) = $1", [email]);
+    if (u.rows.length === 0) return res.status(400).json({ error: "Code invalide ou expiré." });
+    const user = u.rows[0];
+    if (user.email_verified) {
+      return res.status(400).json({ error: "Cet e-mail est déjà vérifié : connectez-vous." });
+    }
+    // Chaque essai est compté dans la requête (atomique) : max CODE_MAX_ATTEMPTS par code
+    const v = await db.query(
+      `UPDATE email_verifications SET attempts = attempts + 1
+       WHERE user_id = $1 AND attempts < $2
+       RETURNING code_hash, expires_at`,
+      [user.id, CODE_MAX_ATTEMPTS],
+    );
+    if (v.rows.length === 0) {
+      return res.status(429).json({ error: "Trop d'essais ou aucun code actif. Demandez un nouveau code." });
+    }
+    if (new Date(v.rows[0].expires_at) <= new Date()) {
+      return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
+    }
+    const given = Buffer.from(hashCode(user.id, code));
+    const expected = Buffer.from(v.rows[0].code_hash);
+    if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+      return res.status(400).json({ error: "Code incorrect." });
+    }
+    await db.withTransaction(async (client) => {
+      await client.query("UPDATE users SET email_verified = TRUE WHERE id = $1", [user.id]);
+      await client.query("DELETE FROM email_verifications WHERE user_id = $1", [user.id]);
+    });
+    const full = await getUserWithStats(user.id);
+    res.json({
+      message: "E-mail vérifié !",
+      token: signToken({ id: full.id, username: full.username }),
+      user: full,
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+});
+
+// Renvoyer un code (réponse neutre si le compte n'existe pas ou est déjà vérifié)
+app.post("/api/auth/resend-code", async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
+  if (!email) return res.status(400).json({ error: "Adresse e-mail requise." });
+  try {
+    const u = await db.query(
+      "SELECT id, username, email FROM users WHERE lower(email) = $1 AND email_verified = FALSE",
+      [email],
+    );
+    if (u.rows.length > 0) {
+      await issueVerificationCode(u.rows[0].id, u.rows[0].username, u.rows[0].email);
+    }
+    res.json({ message: "Si un compte non vérifié existe pour cette adresse, un nouveau code a été envoyé." });
+  } catch (err) {
+    if (err.status) return res.status(err.status).json({ error: err.msg });
+    console.error(err);
+    res.status(502).json({ error: "Impossible d'envoyer l'e-mail pour le moment." });
   }
 });
 
@@ -227,7 +344,7 @@ app.post("/api/auth/login", async (req, res) => {
 
   try {
     const r = await db.query(
-      "SELECT id, username, password_hash FROM users WHERE lower(email) = lower($1) OR lower(username) = lower($1)",
+      "SELECT id, username, email, email_verified, password_hash FROM users WHERE lower(email) = lower($1) OR lower(username) = lower($1)",
       [identifier],
     );
     if (r.rows.length === 0) {
@@ -237,6 +354,19 @@ app.post("/api/auth/login", async (req, res) => {
     const valid = await bcrypt.compare(password, row.password_hash);
     if (!valid) {
       return res.status(400).json({ error: "Identifiants invalides." });
+    }
+    if (!row.email_verified) {
+      // Mot de passe correct mais e-mail non vérifié : on renvoie un code (sauf si un vient de partir)
+      try {
+        await issueVerificationCode(row.id, row.username, row.email);
+      } catch (e) {
+        if (!e.status) console.error("Envoi e-mail impossible :", e.message);
+      }
+      return res.status(403).json({
+        error: "Vérifiez votre e-mail pour activer votre compte : un code vous a été envoyé.",
+        code: "EMAIL_NOT_VERIFIED",
+        email: row.email,
+      });
     }
     const user = await getUserWithStats(row.id);
     res.json({ token: signToken({ id: user.id, username: user.username }), user });
@@ -980,8 +1110,8 @@ app.post("/api/events", authenticateToken, requireTerms, async (req, res) => {
   if (minBet < 1) {
     return res.status(400).json({ error: "Mise minimale invalide." });
   }
-  if (durationHours < 1 || durationHours > 24 * 30) {
-    return res.status(400).json({ error: "Durée invalide." });
+  if (durationHours < 1 || durationHours > 24 * MAX_DURATION_DAYS) {
+    return res.status(400).json({ error: `Durée invalide (de 1 heure à ${MAX_DURATION_DAYS} jours).` });
   }
   const cleanOptions = options
     .map((o) => ({
@@ -1047,7 +1177,7 @@ app.post("/api/events/:id/wagers", authenticateToken, requireTerms, async (req, 
   try {
     const newBalance = await db.withTransaction(async (client) => {
       const evRes = await client.query(
-        "SELECT status, min_bet, expires_at, group_id FROM events WHERE id = $1 FOR UPDATE",
+        "SELECT status, min_bet, expires_at, group_id, creator_id FROM events WHERE id = $1 FOR UPDATE",
         [eventId],
       );
       if (evRes.rows.length === 0) throw { status: 404, msg: "Pari introuvable." };
@@ -1060,6 +1190,9 @@ app.post("/api/events/:id/wagers", authenticateToken, requireTerms, async (req, 
         // même réponse qu'un pari inexistant : on ne révèle pas son existence
         if (m.rows.length === 0) throw { status: 404, msg: "Pari introuvable." };
       }
+      // Le créateur arbitre son pari : il ne peut pas y miser (conflit d'intérêts)
+      if (ev.creator_id === req.user.id)
+        throw { status: 403, msg: "Vous ne pouvez pas miser sur un pari que vous avez créé." };
       if (ev.status !== "active")
         throw { status: 400, msg: "Ce pari est clôturé." };
       if (new Date(ev.expires_at) <= new Date())

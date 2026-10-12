@@ -253,6 +253,43 @@
           </button>
         </form>
 
+
+        <!-- FORM: VÉRIFICATION E-MAIL -->
+        <form id="form-verify" onsubmit="handleVerifyEmail(event)" class="space-y-4 hidden">
+          <div class="p-3 bg-coral-500/10 border border-coral-500/20 rounded-xl flex items-start gap-2.5">
+            <i data-lucide="mail-check" class="w-5 h-5 text-coral-300 shrink-0 mt-0.5"></i>
+            <p class="text-[11px] text-gray-200 leading-snug">
+              Un code à 6 chiffres vient d'être envoyé à
+              <strong id="verify-email-label" class="text-white break-all"></strong>.
+              Il est valable 10 minutes.
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Code de vérification</label>
+            <input
+              type="text"
+              id="verify-code"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              required
+              placeholder="000000"
+              class="w-full bg-gray-900/90 border border-white/10 rounded-xl px-4 py-3 text-2xl text-center tracking-[0.5em] font-black text-white placeholder-gray-600 focus:outline-none focus:border-coral-500 transition-all"
+            />
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3.5 rounded-xl text-sm shadow-lg shadow-coral-500/25 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Valider mon e-mail
+          </button>
+          <div class="flex items-center justify-between text-[11px]">
+            <button type="button" id="verify-resend" onclick="resendVerificationCode()" class="text-coral-300 hover:text-white underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed">Renvoyer le code</button>
+            <button type="button" onclick="switchAuthTab('login')" class="text-gray-400 hover:text-white underline">Retour</button>
+          </div>
+        </form>
+
         <p class="mt-5 text-center text-[10px] text-gray-500 leading-relaxed">
           Points virtuels sans valeur monétaire • Réservé aux 18 ans et plus<br />
           <a href="legal/mentions-legales.html" target="_blank" rel="noopener" class="hover:text-white underline">Mentions légales</a> •
@@ -1330,13 +1367,32 @@
               >
               <select
                 id="bet-duration"
+                onchange="onDurationChange()"
                 class="w-full bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
               >
                 <option value="1">1 heure</option>
                 <option value="24" selected>24 heures</option>
                 <option value="48">48 heures</option>
                 <option value="168">7 jours</option>
+                <option value="custom">Personnalisée…</option>
               </select>
+              <div id="bet-duration-custom" class="hidden mt-2 flex items-center gap-2">
+                <input
+                  type="number"
+                  id="bet-duration-value"
+                  min="1"
+                  value="14"
+                  class="flex-1 bg-gray-900/80 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+                />
+                <select
+                  id="bet-duration-unit"
+                  class="bg-gray-900/80 border border-white/10 rounded-xl px-3 py-3 text-sm text-white focus:outline-none focus:border-coral-500 transition-all"
+                >
+                  <option value="24" selected>jours</option>
+                  <option value="1">heures</option>
+                </select>
+              </div>
+              <p id="bet-duration-hint" class="hidden mt-1 text-[11px] text-gray-400">Maximum : 365 jours.</p>
             </div>
 
             <div class="pt-4 flex items-center gap-3">

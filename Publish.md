@@ -82,6 +82,13 @@ Vérifiez avant le premier push que **`backend/.env` n'est pas dans le commit** 
    |---|---|
    | `DATABASE_URL` | la chaîne **pooler** de Neon (étape 1) |
    | `JWT_SECRET` | une longue chaîne aléatoire, **différente de celle de votre `.env` local** |
+   | `SMTP_HOST` | serveur SMTP (ex. `smtp-relay.brevo.com`) |
+   | `SMTP_PORT` | `587` (ou `465`) |
+   | `SMTP_USER` | identifiant SMTP |
+   | `SMTP_PASS` | mot de passe / clé SMTP |
+   | `MAIL_FROM` | expéditeur, ex. `Pickone <no-reply@votredomaine.fr>` (adresse validée chez votre fournisseur) |
+
+   Les variables `SMTP_*` sont nécessaires pour envoyer le code de vérification d'e-mail. Pensez à relancer `npm run init-db` pour créer la nouvelle table `email_verifications`.
 
    Pour générer le secret :
 
