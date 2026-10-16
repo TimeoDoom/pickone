@@ -142,6 +142,9 @@
                 class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
               />
             </div>
+            <div class="mt-2 text-right">
+              <button type="button" onclick="showForgotStep()" class="text-[11px] text-coral-300 hover:text-white underline">Mot de passe oublié ?</button>
+            </div>
           </div>
 
           <button
@@ -286,6 +289,105 @@
           </button>
           <div class="flex items-center justify-between text-[11px]">
             <button type="button" id="verify-resend" onclick="resendVerificationCode()" class="text-coral-300 hover:text-white underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed">Renvoyer le code</button>
+            <button type="button" onclick="switchAuthTab('login')" class="text-gray-400 hover:text-white underline">Retour</button>
+          </div>
+        </form>
+
+        <!-- FORM: MOT DE PASSE OUBLIÉ (étape 1 : e-mail) -->
+        <form id="form-forgot" onsubmit="handleForgotPassword(event)" class="space-y-4 hidden">
+          <div class="p-3 bg-coral-500/10 border border-coral-500/20 rounded-xl flex items-start gap-2.5">
+            <i data-lucide="key-round" class="w-5 h-5 text-coral-300 shrink-0 mt-0.5"></i>
+            <p class="text-[11px] text-gray-200 leading-snug">
+              Entrez l'adresse e-mail de votre compte : nous vous enverrons un code à 6 chiffres pour choisir un nouveau mot de passe.
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">E-mail</label>
+            <div class="relative">
+              <i data-lucide="mail" class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"></i>
+              <input
+                type="email"
+                id="forgot-email"
+                required
+                autocomplete="email"
+                placeholder="vous@exemple.com"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3.5 rounded-xl text-sm shadow-lg shadow-coral-500/25 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="send" class="w-4 h-4"></i> Envoyer le code
+          </button>
+          <div class="text-center text-[11px]">
+            <button type="button" onclick="switchAuthTab('login')" class="text-gray-400 hover:text-white underline">Retour à la connexion</button>
+          </div>
+        </form>
+
+        <!-- FORM: MOT DE PASSE OUBLIÉ (étape 2 : code + nouveau mot de passe) -->
+        <form id="form-reset" onsubmit="handleResetPassword(event)" class="space-y-4 hidden">
+          <div class="p-3 bg-coral-500/10 border border-coral-500/20 rounded-xl flex items-start gap-2.5">
+            <i data-lucide="mail-check" class="w-5 h-5 text-coral-300 shrink-0 mt-0.5"></i>
+            <p class="text-[11px] text-gray-200 leading-snug">
+              Si un compte existe pour
+              <strong id="reset-email-label" class="text-white break-all"></strong>,
+              un code à 6 chiffres vient d'y être envoyé (pensez aux spams). Il est valable 10 minutes.
+            </p>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Code reçu par e-mail</label>
+            <input
+              type="text"
+              id="reset-code"
+              inputmode="numeric"
+              autocomplete="one-time-code"
+              maxlength="6"
+              pattern="[0-9]{6}"
+              required
+              placeholder="000000"
+              class="w-full bg-gray-900/90 border border-white/10 rounded-xl px-4 py-3 text-2xl text-center tracking-[0.5em] font-black text-white placeholder-gray-600 focus:outline-none focus:border-coral-500 transition-all"
+            />
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Nouveau mot de passe</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"></i>
+              <input
+                type="password"
+                id="reset-password"
+                required
+                minlength="6"
+                autocomplete="new-password"
+                placeholder="6 caractères minimum"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+          <div>
+            <label class="block text-xs font-bold text-gray-300 uppercase tracking-wider mb-1.5">Confirmer le mot de passe</label>
+            <div class="relative">
+              <i data-lucide="lock" class="w-4 h-4 absolute left-3.5 top-3.5 text-gray-500"></i>
+              <input
+                type="password"
+                id="reset-password2"
+                required
+                minlength="6"
+                autocomplete="new-password"
+                placeholder="••••••••"
+                class="w-full bg-gray-900/90 border border-white/10 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder-gray-500 focus:outline-none focus:border-coral-500 transition-all"
+              />
+            </div>
+          </div>
+          <button
+            type="submit"
+            class="w-full bg-coral-500 hover:bg-coral-400 text-white font-black py-3.5 rounded-xl text-sm shadow-lg shadow-coral-500/25 transition-all flex items-center justify-center gap-2"
+          >
+            <i data-lucide="check-circle" class="w-4 h-4"></i> Changer mon mot de passe
+          </button>
+          <div class="flex items-center justify-between text-[11px]">
+            <button type="button" id="reset-resend" onclick="resendResetCode()" class="text-coral-300 hover:text-white underline disabled:opacity-50 disabled:no-underline disabled:cursor-not-allowed">Renvoyer le code</button>
             <button type="button" onclick="switchAuthTab('login')" class="text-gray-400 hover:text-white underline">Retour</button>
           </div>
         </form>

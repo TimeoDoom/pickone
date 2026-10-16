@@ -324,6 +324,102 @@ async function resendVerificationCode() {
   }
 }
 
+// ---------- Mot de passe oublié ----------
+let resetEmail = "";
+let resetTimer = null;
+
+function showAuthForm(id) {
+  ["form-login", "form-register", "form-verify", "form-forgot", "form-reset"].forEach((f) =>
+    document.getElementById(f).classList.toggle("hidden", f !== id),
+  );
+  lucide.createIcons();
+}
+
+// Étape 1 : saisie de l'e-mail (pré-rempli si l'utilisateur l'a déjà tapé dans le champ identifiant)
+function showForgotStep() {
+  const ident = document.getElementById("login-identifier").value.trim();
+  document.getElementById("forgot-email").value = ident.includes("@") ? ident : "";
+  showAuthForm("form-forgot");
+  document.getElementById("forgot-email").focus();
+}
+
+function showResetStep(email) {
+  resetEmail = email;
+  document.getElementById("reset-email-label").textContent = email;
+  document.getElementById("reset-code").value = "";
+  document.getElementById("reset-password").value = "";
+  document.getElementById("reset-password2").value = "";
+  showAuthForm("form-reset");
+  document.getElementById("reset-code").focus();
+  startResetCooldown(60);
+}
+
+function startResetCooldown(seconds) {
+  const btn = document.getElementById("reset-resend");
+  clearInterval(resetTimer);
+  let left = seconds;
+  const tick = () => {
+    if (left <= 0) {
+      clearInterval(resetTimer);
+      btn.disabled = false;
+      btn.textContent = "Renvoyer le code";
+      return;
+    }
+    btn.disabled = true;
+    btn.textContent = `Renvoyer le code (${left}s)`;
+    left--;
+  };
+  tick();
+  resetTimer = setInterval(tick, 1000);
+}
+
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const email = document.getElementById("forgot-email").value.trim().toLowerCase();
+  try {
+    await api("/auth/forgot-password", { method: "POST", auth: false, body: { email } });
+    showResetStep(email);
+    showToast("Si un compte existe, un code vient d'être envoyé. Pensez aux spams.", "success");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function resendResetCode() {
+  try {
+    await api("/auth/forgot-password", { method: "POST", auth: false, body: { email: resetEmail } });
+    showToast("Si un compte existe, un nouveau code vient d'être envoyé.", "success");
+    startResetCooldown(60);
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const code = document.getElementById("reset-code").value.trim();
+  const newPassword = document.getElementById("reset-password").value;
+  const confirm = document.getElementById("reset-password2").value;
+  if (newPassword !== confirm) {
+    return showToast("Les deux mots de passe ne correspondent pas.", "error");
+  }
+  try {
+    const data = await api("/auth/reset-password", {
+      method: "POST",
+      auth: false,
+      body: { email: resetEmail, code, newPassword },
+    });
+    clearInterval(resetTimer);
+    switchAuthTab("login");
+    document.getElementById("login-identifier").value = resetEmail;
+    document.getElementById("login-password").value = "";
+    document.getElementById("login-password").focus();
+    showToast(data.message, "success");
+  } catch (err) {
+    showToast(err.message, "error");
+  }
+}
+
 function confirmLogout() {
   closeModal("modal-logout");
   endSession();
@@ -669,6 +765,9 @@ function switchAuthTab(tab) {
   const formLogin = document.getElementById("form-login");
   const formReg = document.getElementById("form-register");
   document.getElementById("form-verify").classList.add("hidden");
+  document.getElementById("form-forgot").classList.add("hidden");
+  document.getElementById("form-reset").classList.add("hidden");
+  clearInterval(resetTimer);
 
   if (tab === "login") {
     loginBtn.className =

@@ -8,7 +8,7 @@ require("dotenv").config();
 const db = require("./db");
 const authenticateToken = require("./middleware/auth");
 const fs = require("fs");
-const { sendVerificationCode } = require("./mailer");
+const { sendVerificationCode, sendPasswordResetCode } = require("./mailer");
 
 if (!process.env.JWT_SECRET) {
   console.error("JWT_SECRET manquant dans le fichier .env");
@@ -370,6 +370,111 @@ app.post("/api/auth/login", async (req, res) => {
     }
     const user = await getUserWithStats(row.id);
     res.json({ token: signToken({ id: user.id, username: user.username }), user });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+});
+
+// ---------- 2b. Mot de passe oublié ----------
+// Le code est lié à l'utilisateur ET à l'usage ("reset:") : un code de vérification d'e-mail
+// ne peut jamais servir à réinitialiser un mot de passe, et inversement.
+const hashResetCode = (userId, code) => hashCode(userId, `reset:${code}`);
+
+async function issuePasswordResetCode(userId, username, email) {
+  const code = String(crypto.randomInt(0, 1000000)).padStart(6, "0");
+  const r = await db.query(
+    `INSERT INTO password_resets (user_id, code_hash, expires_at, attempts, last_sent_at)
+     VALUES ($1, $2, NOW() + ($3 || ' minutes')::interval, 0, NOW())
+     ON CONFLICT (user_id) DO UPDATE
+       SET code_hash = EXCLUDED.code_hash, expires_at = EXCLUDED.expires_at,
+           attempts = 0, last_sent_at = NOW()
+       WHERE password_resets.last_sent_at <= NOW() - ($4 || ' seconds')::interval
+     RETURNING user_id`,
+    [userId, hashResetCode(userId, code), String(CODE_TTL_MINUTES), String(CODE_RESEND_SECONDS)],
+  );
+  // Délai de renvoi non écoulé : on n'envoie rien (la réponse reste neutre côté route)
+  if (r.rows.length === 0) return false;
+  try {
+    await sendPasswordResetCode(email, username, code, CODE_TTL_MINUTES);
+  } catch (err) {
+    // L'e-mail n'est pas parti : on retire le code pour ne pas bloquer une nouvelle demande
+    await db.query("DELETE FROM password_resets WHERE user_id = $1", [userId]).catch(() => {});
+    throw err;
+  }
+  return true;
+}
+
+// Demande de code. Réponse TOUJOURS identique, que le compte existe ou non
+// (sinon on permettrait de deviner quelles adresses sont inscrites).
+app.post("/api/auth/forgot-password", async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
+  if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+    return res.status(400).json({ error: "Adresse e-mail invalide." });
+  }
+  const neutral = {
+    message: "Si un compte existe pour cette adresse, un code de réinitialisation vient d'être envoyé.",
+  };
+  try {
+    const u = await db.query("SELECT id, username, email FROM users WHERE lower(email) = $1", [email]);
+    if (u.rows.length > 0) {
+      try {
+        await issuePasswordResetCode(u.rows[0].id, u.rows[0].username, u.rows[0].email);
+      } catch (e) {
+        // Erreur SMTP : on la journalise mais on ne la révèle pas (réponse neutre)
+        console.error("Envoi e-mail de réinitialisation impossible :", e.message);
+      }
+    }
+    res.json(neutral);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Erreur serveur." });
+  }
+});
+
+// Vérifie le code et définit le nouveau mot de passe
+app.post("/api/auth/reset-password", async (req, res) => {
+  const email = (req.body.email || "").trim().toLowerCase();
+  const code = String(req.body.code || "").replace(/\s/g, "");
+  const newPassword = req.body.newPassword || "";
+  if (!email || !/^\d{6}$/.test(code)) {
+    return res.status(400).json({ error: "Entrez le code à 6 chiffres reçu par e-mail." });
+  }
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: "Le mot de passe doit faire au moins 6 caractères." });
+  }
+  try {
+    const u = await db.query("SELECT id FROM users WHERE lower(email) = $1", [email]);
+    if (u.rows.length === 0) return res.status(400).json({ error: "Code invalide ou expiré." });
+    const userId = u.rows[0].id;
+
+    // Chaque essai est compté dans la requête (atomique) : max CODE_MAX_ATTEMPTS par code
+    const v = await db.query(
+      `UPDATE password_resets SET attempts = attempts + 1
+       WHERE user_id = $1 AND attempts < $2
+       RETURNING code_hash, expires_at`,
+      [userId, CODE_MAX_ATTEMPTS],
+    );
+    if (v.rows.length === 0) {
+      return res.status(429).json({ error: "Trop d'essais ou aucun code actif. Demandez un nouveau code." });
+    }
+    if (new Date(v.rows[0].expires_at) <= new Date()) {
+      return res.status(400).json({ error: "Code expiré. Demandez un nouveau code." });
+    }
+    const given = Buffer.from(hashResetCode(userId, code));
+    const expected = Buffer.from(v.rows[0].code_hash);
+    if (given.length !== expected.length || !crypto.timingSafeEqual(given, expected)) {
+      return res.status(400).json({ error: "Code incorrect." });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await db.withTransaction(async (client) => {
+      // Le code reçu par e-mail prouve que la boîte appartient à l'utilisateur : e-mail vérifié
+      await client.query("UPDATE users SET password_hash = $1, email_verified = TRUE WHERE id = $2", [hashed, userId]);
+      await client.query("DELETE FROM password_resets WHERE user_id = $1", [userId]);
+      await client.query("DELETE FROM email_verifications WHERE user_id = $1", [userId]);
+    });
+    res.json({ message: "Mot de passe modifié. Vous pouvez maintenant vous connecter." });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Erreur serveur." });

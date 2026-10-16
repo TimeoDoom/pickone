@@ -44,4 +44,30 @@ async function sendVerificationCode(to, username, code, minutes) {
   });
 }
 
-module.exports = { sendVerificationCode };
+async function sendPasswordResetCode(to, username, code, minutes) {
+  if (!configured) {
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SMTP non configuré (SMTP_HOST / SMTP_USER / SMTP_PASS).");
+    }
+    console.log(`\n✉  [DEV] Code de réinitialisation du mot de passe pour ${to} : ${code}\n`);
+    return;
+  }
+  const safeName = String(username).replace(/[&<>"']/g, "");
+  await getTransporter().sendMail({
+    from: process.env.MAIL_FROM || process.env.SMTP_USER,
+    to,
+    subject: `${code} est votre code de réinitialisation Pickone`,
+    text:
+      `Bonjour ${safeName},\n\nVotre code de réinitialisation de mot de passe Pickone : ${code}\n` +
+      `Il est valable ${minutes} minutes.\n\n` +
+      `Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste inchangé.`,
+    html:
+      `<div style="font-family:Arial,sans-serif;max-width:420px;margin:auto">` +
+      `<h2>Réinitialisation de mot de passe</h2>` +
+      `<p>Bonjour ${safeName}, voici votre code :</p>` +
+      `<p style="font-size:34px;font-weight:bold;letter-spacing:8px;background:#f4f4f5;padding:14px;text-align:center;border-radius:10px">${code}</p>` +
+      `<p style="color:#666">Il est valable ${minutes} minutes. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe actuel reste inchangé.</p></div>`,
+  });
+}
+
+module.exports = { sendVerificationCode, sendPasswordResetCode };
